@@ -4,7 +4,8 @@
 import streamlit as st
 from dataclasses import dataclass, field
 from typing import List
-import textwrap, datetime
+import textwrap
+import datetime
 
 
 # ───────────────────────────────────────────────
@@ -18,6 +19,7 @@ class Account:
 
     def render(self, idx: int) -> str:
         indent = " " * 4
+
         def bullets(items):
             return "\n".join(f"{indent}• {x}" for x in items) if items else indent + "• –"
 
