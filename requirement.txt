@@ -4,3 +4,5 @@ google-auth
 requests
 beautifulsoup4
 streamlit
+openai>=1.0.0
+google-search-results
