@@ -171,23 +171,33 @@ class UseCasesRegistry:
 
 
 class PGAgent:
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.35, *, offline: bool = False, logger: PGLogger | None = None):
-        if openai is None and not offline:
-            raise ImportError("Install openai and set OPENAI_API_KEY")
+    def __init__(
+        self,
+        model: str = "gpt-4o-mini",
+        temperature: float = 0.35,
+        *,
+        offline: bool = False,
+        logger: PGLogger | None = None,
+    ):
+        """Initialize the agent and check for required dependencies."""
+        self.model, self.temperature = model, temperature
+        self.logger = logger or PGLogger()
+        self.warning: str | None = None
 
         api_key = os.getenv("OPENAI_API_KEY")
+        issues = []
+        if openai is None and not offline:
+            issues.append("openai package missing")
         if not offline and not api_key:
-            raise EnvironmentError("OPENAI_API_KEY not set")
-
-        self._client = openai.OpenAI(api_key=api_key) if not offline else None
-
+            issues.append("OPENAI_API_KEY not set")
         if not offline and GoogleSearch is None:
-            raise ImportError(
-                "Install google-search-results for SerpAPI or pass offline=True"
-            )
+            issues.append("google-search-results package missing")
 
-        self.model, self.temperature, self.offline = model, temperature, offline
-        self.logger = logger or PGLogger()
+        self.offline = offline or bool(issues)
+        if issues:
+            self.warning = "; ".join(issues)
+            self.logger.log(error=self.warning)
+        self._client = None if self.offline else openai.OpenAI(api_key=api_key)
 
     def pg_person(self, c: ContactInfo, *, prior_work: List[str] | None = None) -> str:
         if not c.is_person:
@@ -321,6 +331,8 @@ if __name__ == "__main__":
         notes=args.notes,
     )
     agent = PGAgent(offline=args.offline)
+    if agent.warning:
+        print(f"[WARN] {agent.warning}\n")
     email = agent.pg_account(contact) if args.account else agent.pg_person(contact)
     print("\n— Generated PG Email —\n")
     print(email)
